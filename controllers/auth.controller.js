@@ -1,12 +1,16 @@
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User.model");
 const OTP = require("../models/OTP.model");
 
 const generateOTP = require("../utils/generateOTP");
-const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
 
 
+const {
+    generateAccessToken,
+    generateRefreshToken
+} = require("../utils/generateToken");
 
 const sendRegisterOtp = async (req, res) => {
 
@@ -79,102 +83,70 @@ const sendRegisterOtp = async (req, res) => {
 
 
 
-
 const verifyOtp = async (req, res) => {
-
     try {
-
         const { email, otp } = req.body;
 
         const otpRecord = await OTP.findOne({ email });
 
         if (!otpRecord) {
-
             return res.status(400).json({
-
                 success: false,
-
                 message: "OTP not found"
-
             });
-
         }
 
         if (otpRecord.otp !== otp) {
-
             return res.status(400).json({
-
                 success: false,
-
                 message: "Invalid OTP"
-
             });
-
         }
 
         if (otpRecord.expiresAt < new Date()) {
-
             await OTP.deleteOne({ email });
 
             return res.status(400).json({
-
                 success: false,
-
                 message: "OTP has expired"
-
             });
-
         }
 
+        // 1) Create user
         const user = await User.create({
-
             ...otpRecord.userData,
-
             isVerified: true
-
         });
 
         await OTP.deleteOne({ email });
 
-        const token = generateToken(user._id);
+        // 2) Generate tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
 
-        res.cookie("token", token, {
-
+        // 3) Set refresh token in cookie
+        res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-
             secure: process.env.NODE_ENV === "production",
-
             sameSite: "strict",
-
             maxAge: 7 * 24 * 60 * 60 * 1000
-
         });
 
+        // 4) Send response
         res.status(201).json({
-
             success: true,
-
             message: "Account verified successfully",
-
+            accessToken,
             user
-
         });
 
     } catch (error) {
-
         res.status(500).json({
-
             success: false,
-
             message: error.message
-
         });
-
     }
-
 };
-
-
 
 
 
@@ -189,75 +161,53 @@ const login = async (req, res) => {
         const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
-
             return res.status(400).json({
-
                 success: false,
-
                 message: "Invalid email or password"
-
             });
-
         }
 
         if (!user.isVerified) {
-
             return res.status(400).json({
-
                 success: false,
-
                 message: "Please verify your account first"
-
             });
-
         }
 
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
-
             return res.status(400).json({
-
                 success: false,
-
                 message: "Invalid email or password"
-
             });
-
         }
 
-        const token = generateToken(user._id);
+        // Generate Tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
 
-        res.cookie("token", token, {
-
+        // Save Refresh Token in Cookie
+        res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-
             secure: process.env.NODE_ENV === "production",
-
             sameSite: "strict",
-
             maxAge: 7 * 24 * 60 * 60 * 1000
-
         });
 
+        // Send Access Token
         res.status(200).json({
-
             success: true,
-
             message: "Login successful",
-
+            accessToken,
             user
-
         });
 
     } catch (error) {
 
         res.status(500).json({
-
             success: false,
-
             message: error.message
-
         });
 
     }
@@ -266,13 +216,57 @@ const login = async (req, res) => {
 
 
 
+const refreshToken = async (req, res) => {
+    try {
 
+        const token = req.cookies.refreshToken;
 
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Refresh token is required"
+            });
+        }
+
+        const decoded = jwt.verify(
+            token,
+            process.env.REFRESH_SECRET
+        );
+
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const accessToken = generateAccessToken(user);
+
+        return res.status(200).json({
+            success: true,
+            accessToken
+        });
+
+    } catch (error) {
+
+        return res.status(401).json({
+            success: false,
+            message: "Invalid or expired refresh token"
+        });
+
+    }
+};
 
 
 const logout = async (req, res) => {
 
-    res.clearCookie("token");
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict"
+    });
 
     res.status(200).json({
 
@@ -321,15 +315,25 @@ const sendForgotPasswordOtp = async (req, res) => {
 
         });
 
-        await sendEmail(
+        try {
 
-            email,
+            await sendEmail(
 
-            "Reset Password OTP",
+                email,
 
-            `<h2>Your OTP is: ${otp}</h2>`
+                "Reset Password OTP",
 
-        );
+                `<h2>Your OTP is: ${otp}</h2>`
+
+            );
+
+        } catch (err) {
+
+            console.log("Send Email Error:", err);
+
+            throw err;
+
+        }
 
         res.status(200).json({
 
@@ -352,9 +356,6 @@ const sendForgotPasswordOtp = async (req, res) => {
     }
 
 };
-
-
-
 
 
 
@@ -550,6 +551,8 @@ module.exports = {
     verifyOtp,
 
     login,
+
+    refreshToken,
 
     logout,
 

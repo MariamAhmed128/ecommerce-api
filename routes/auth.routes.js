@@ -41,6 +41,14 @@ router.post(
 );
 
 
+
+//Refresh-token
+
+router.post("/refresh-token", authController.refreshToken);
+
+
+
+
 // Logout
 router.post(
     "/logout",

@@ -1,3 +1,27 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.model");
 
@@ -5,9 +29,9 @@ const auth = async (req, res, next) => {
 
     try {
 
-        const token = req.cookies.token;
+        const authHeader = req.headers.authorization;
 
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
             return res.status(401).json({
 
@@ -17,6 +41,8 @@ const auth = async (req, res, next) => {
             });
 
         }
+
+        const token = authHeader.replace("Bearer ", "").trim();
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -34,15 +60,16 @@ const auth = async (req, res, next) => {
         }
 
         req.user = user;
+        req.token = token;
 
         next();
 
     } catch (error) {
 
-        res.status(401).json({
+        return res.status(401).json({
 
             success: false,
-            message: "Invalid or expired token"
+            message: "Invalid or expired access token"
 
         });
 
