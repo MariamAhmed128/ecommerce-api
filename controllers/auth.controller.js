@@ -278,8 +278,7 @@ const logout = async (req, res) => {
 
 };
 
-
-const sendForgotPasswordOtp = async (req, res) => {
+const forgotPassword = async (req, res) => {
 
     try {
 
@@ -292,139 +291,52 @@ const sendForgotPasswordOtp = async (req, res) => {
             return res.status(404).json({
 
                 success: false,
-
                 message: "User not found"
 
             });
 
         }
 
-        const otp = generateOTP();
-
-        await OTP.findOneAndDelete({ email });
-
-        await OTP.create({
-
-            email,
-
-            otp,
-
-            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-
-            userData: {}
-
-        });
-
-        try {
-
-            await sendEmail(
-
-                email,
-
-                "Reset Password OTP",
-
-                `<h2>Your OTP is: ${otp}</h2>`
-
-            );
-
-        } catch (err) {
-
-            console.log("Send Email Error:", err);
-
-            throw err;
-
-        }
-
-        res.status(200).json({
-
-            success: true,
-
-            message: "OTP sent successfully"
-
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-
-            success: false,
-
-            message: error.message
-
-        });
-
-    }
-
-};
-
-
-
-
-const verifyForgotPasswordOtp = async (req, res) => {
-
-    try {
-
-        const { email, otp } = req.body;
-
-        const otpRecord = await OTP.findOne({ email });
-
-        if (!otpRecord) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message: "OTP not found"
-
-            });
-
-        }
-
-        if (otpRecord.otp !== otp) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message: "Invalid OTP"
-
-            });
-
-        }
-
-        if (otpRecord.expiresAt < new Date()) {
-
-            await OTP.deleteOne({ email });
-
-            return res.status(400).json({
-
-                success: false,
-
-                message: "OTP expired"
-
-            });
-
-        }
-
+        // Generate Original Reset Token
         const resetToken = crypto.randomBytes(32).toString("hex");
 
-        const user = await User.findOne({ email });
+        // Hash Token before saving in DB
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
 
-        user.resetPasswordToken = resetToken;
-
+        // Save Hashed Token
+        user.resetPasswordToken = hashedToken;
         user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
 
         await user.save();
 
-        await OTP.deleteOne({ email });
+        // Reset Link
+        const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+        await sendEmail(
+
+            email,
+
+            "Reset Your Password",
+
+            `
+            <h2>Password Reset Request</h2>
+
+            <p>Click the link below to reset your password:</p>
+
+            <a href="${resetURL}">${resetURL}</a>
+
+            <p>This link expires in 10 minutes.</p>
+            `
+
+        );
 
         res.status(200).json({
 
             success: true,
-
-            message: "OTP verified successfully",
-
-            resetToken
+            message: "Password reset link sent successfully"
 
         });
 
@@ -433,7 +345,6 @@ const verifyForgotPasswordOtp = async (req, res) => {
         res.status(500).json({
 
             success: false,
-
             message: error.message
 
         });
@@ -441,8 +352,6 @@ const verifyForgotPasswordOtp = async (req, res) => {
     }
 
 };
-
-
 
 
 
@@ -454,9 +363,14 @@ const resetPassword = async (req, res) => {
 
         const { resetToken, password } = req.body;
 
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
+
         const user = await User.findOne({
 
-            resetPasswordToken: resetToken,
+            resetPasswordToken: hashedToken,
 
             resetPasswordExpires: { $gt: Date.now() }
 
@@ -467,7 +381,6 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({
 
                 success: false,
-
                 message: "Invalid or expired reset token"
 
             });
@@ -477,7 +390,6 @@ const resetPassword = async (req, res) => {
         user.password = password;
 
         user.resetPasswordToken = undefined;
-
         user.resetPasswordExpires = undefined;
 
         await user.save();
@@ -485,7 +397,6 @@ const resetPassword = async (req, res) => {
         res.status(200).json({
 
             success: true,
-
             message: "Password reset successfully"
 
         });
@@ -495,7 +406,6 @@ const resetPassword = async (req, res) => {
         res.status(500).json({
 
             success: false,
-
             message: error.message
 
         });
@@ -503,7 +413,6 @@ const resetPassword = async (req, res) => {
     }
 
 };
-
 
 
 
@@ -556,9 +465,7 @@ module.exports = {
 
     logout,
 
-    sendForgotPasswordOtp,
-
-    verifyForgotPasswordOtp,
+    forgotPassword,
 
     resetPassword,
 

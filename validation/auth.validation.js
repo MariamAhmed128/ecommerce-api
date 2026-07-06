@@ -51,18 +51,6 @@ const forgotPasswordValidation = Joi.object({
 
 });
 
-
-const verifyForgotPasswordOtpValidation = Joi.object({
-
-    email: Joi.string()
-        .email()
-        .required(),
-
-    otp: Joi.string()
-        .length(6)
-        .required()
-
-});
 const resetPasswordValidation = Joi.object({
 
     resetToken: Joi.string()
@@ -83,8 +71,6 @@ module.exports = {
     loginValidation,
 
     forgotPasswordValidation,
-
-    verifyForgotPasswordOtpValidation,
 
     resetPasswordValidation
 

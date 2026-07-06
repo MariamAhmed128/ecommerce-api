@@ -13,10 +13,8 @@ const {
     verifyOtpValidation,
     loginValidation,
     forgotPasswordValidation,
-    verifyForgotPasswordOtpValidation,
     resetPasswordValidation
 } = require("../validation/auth.validation");
-
 
 
 // Register
@@ -56,18 +54,11 @@ router.post(
     authController.logout
 );
 
-
 // Forgot Password
 router.post(
-    "/forgot-password/send-otp",
+    "/forgot-password",
     validate(forgotPasswordValidation),
-    authController.sendForgotPasswordOtp
-);
-
-router.post(
-    "/forgot-password/verify-otp",
-    validate(verifyForgotPasswordOtpValidation),
-    authController.verifyForgotPasswordOtp
+    authController.forgotPassword
 );
 
 router.post(
@@ -75,8 +66,6 @@ router.post(
     validate(resetPasswordValidation),
     authController.resetPassword
 );
-
-
 // Current User
 router.get(
     "/me",
