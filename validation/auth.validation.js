@@ -62,16 +62,18 @@ const resetPasswordValidation = Joi.object({
 
 });
 
+const changeRoleValidation = Joi.object({
+    role: Joi.string()
+        .valid("customer", "admin")
+        .required()
+});
+
+
 module.exports = {
-
     registerValidation,
-
     verifyOtpValidation,
-
     loginValidation,
-
     forgotPasswordValidation,
-
-    resetPasswordValidation
-
+    resetPasswordValidation,
+    changeRoleValidation
 };

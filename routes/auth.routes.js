@@ -3,19 +3,18 @@ const express = require("express");
 const router = express.Router();
 
 const authController = require("../controllers/auth.controller");
-
-const { auth } = require("../middleware/auth.middleware");
-
 const validate = require("../middleware/validation.middleware");
+const { auth, admin } = require("../middleware/auth.middleware");
+const validateObjectId = require("../middleware/validateObjectId.middleware");
 
 const {
     registerValidation,
     verifyOtpValidation,
     loginValidation,
     forgotPasswordValidation,
-    resetPasswordValidation
+    resetPasswordValidation,
+    changeRoleValidation
 } = require("../validation/auth.validation");
-
 
 // Register
 router.post(
@@ -44,8 +43,15 @@ router.post(
 
 router.post("/refresh-token", authController.refreshToken);
 
-
-
+// Admin update role
+router.patch(
+    "/change-role/:id",
+    auth,
+    admin,
+    validateObjectId,
+    validate(changeRoleValidation),
+    authController.changeRole
+);
 
 // Logout
 router.post(
