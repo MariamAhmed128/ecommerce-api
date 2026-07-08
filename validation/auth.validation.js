@@ -17,7 +17,7 @@ const registerValidation = Joi.object({
     phone: Joi.string()
         .required()
 
-});
+}).unknown(false);
 
 const verifyOtpValidation = Joi.object({
 

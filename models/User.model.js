@@ -58,10 +58,15 @@ const userSchema = new mongoose.Schema({
     phone:{
         type:String,
     },
-    avatar:{
-        type:String,
-        default:"https://api.dicebear.com/9.x/initials/svg?seed=User",
-        // default:"/images/avatar.svg"
+   avatar: {
+        url: {
+            type: String,
+            default: "https://api.dicebear.com/9.x/initials/svg?seed=User"
+        },
+        publicId: {
+            type: String,
+            default: null
+        }
     },
     role:{
         type:String,
@@ -116,4 +121,6 @@ userSchema.methods.toJSON = function () {
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
+
+
 

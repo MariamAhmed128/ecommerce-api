@@ -23,7 +23,8 @@ const auth = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await User.findById(decoded.id);
+        // const user = await User.findById(decoded.id);
+        const user = await User.findById(decoded.id).select("+password");
 
         if (!user) {
 
@@ -54,4 +55,35 @@ const auth = async (req, res, next) => {
 
 };
 
-module.exports = auth;
+const admin = (req , res , next)=>{
+
+
+    try{
+        if( req.user.role!== 'admin'){
+            return res.status(403).json({
+                success: false,
+                message: "Admin access required"
+            })
+        }
+        next();
+   }
+   
+   catch(error){
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+
+        });
+   }
+};
+
+
+
+
+
+module.exports = {
+    auth,
+    admin  
+}
+;
