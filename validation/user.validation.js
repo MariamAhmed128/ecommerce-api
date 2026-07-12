@@ -41,18 +41,7 @@ const updateUserValidation = Joi.object({
     )
 
 }).unknown(false);
-
-const changePasswordValidation = Joi.object({
-    currentPassword: Joi.string()
-        .required(),
-
-    newPassword: Joi.string()
-        .min(6)
-        .required()
-}).unknown(false);
-
 module.exports = {
     addUserValidation,
     updateUserValidation,
-    changePasswordValidation
 };

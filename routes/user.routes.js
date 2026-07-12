@@ -49,13 +49,6 @@ router.delete(
 
 // User Routes
 router.patch(
-    "/change-password",
-    auth,
-    validate(changePasswordValidation),
-    userController.changePassword
-);
-
-router.patch(
     "/:id",
     auth,
     validateObjectId,

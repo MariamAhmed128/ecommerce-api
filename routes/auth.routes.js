@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const authController = require("../controllers/auth.controller");
+const userController = require("../controllers/user.controller");
 const validate = require("../middleware/validation.middleware");
 const { auth, admin } = require("../middleware/auth.middleware");
 const validateObjectId = require("../middleware/validateObjectId.middleware");
@@ -13,6 +14,7 @@ const {
     loginValidation,
     forgotPasswordValidation,
     resetPasswordValidation,
+    changePasswordValidation,
     changeRoleValidation
 } = require("../validation/auth.validation");
 
@@ -72,6 +74,16 @@ router.post(
     validate(resetPasswordValidation),
     authController.resetPassword
 );
+
+//change password
+router.patch(
+    "/change-password",
+    auth,
+    validate(changePasswordValidation),
+    authController.changePassword
+    
+);
+
 // Current User
 router.get(
     "/me",

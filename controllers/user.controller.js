@@ -1,21 +1,26 @@
 
-const User = require("../models/User.model")
+const User = require("../models/User.model");
 const {
     uploadToCloudinary,
     deleteFromCloudinary
 } = require("../utils/uploadToCloudinary");
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
-const addUser = async (req, res) => {
-    try{
+const AppError = require("../utils/appError");
+const MESSAGES = require("../utils/messages");
+
+
+const addUser = async (req, res, next) => {
+    try {
+
         const { username, email, password, phone, role } = req.body;
+
         const existingUser = await User.findOne({ email });
-        if(existingUser){
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists"
-            })
+
+        if (existingUser) {
+            throw new AppError(MESSAGES.EMAIL_ALREADY_EXISTS, 409);
         }
+
         const user = await User.create({
             username,
             email,
@@ -24,27 +29,28 @@ const addUser = async (req, res) => {
             role: role || "customer",
             isVerified: true
         });
+
         return res.status(201).json({
             success: true,
-            message: "User added successfully",
+            message: MESSAGES.USER_ADDED_SUCCESSFULLY,
             data: user
-        });    
-    }
-catch(error){
-      console.error(error);
-       return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-
         });
 
-    }
+    
+    } catch (error) {
+
+    console.error(error);
+
+    next(error);
+
 }
+};
 
 
 
-const getUsers = async (req, res) => {
+const getUsers = async (req, res, next) => {
     try {
+
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.max(parseInt(req.query.limit) || 10, 1);
         const skip = (page - 1) * limit;
@@ -55,7 +61,7 @@ const getUsers = async (req, res) => {
             filter.role = req.query.role;
         }
 
-       if (req.query.isVerified !== undefined) {
+        if (req.query.isVerified !== undefined) {
             filter.isVerified = req.query.isVerified === "true";
         }
 
@@ -81,7 +87,7 @@ const getUsers = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Users retrieved successfully",
+            message: MESSAGES.USERS_RETRIEVED_SUCCESSFULLY,
             data: users,
             pagination: {
                 totalUsers,
@@ -92,46 +98,124 @@ const getUsers = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
+
+    console.error(error);
+
+    next(error);
+
+}
 };
 
 
 
-const getUserById = async(req, res)=>{
-    try{
+const getUserById = async (req, res, next) => {
+    try {
+
         const id = req.params.id;
+
         const user = await User.findById(id);
-        if(!user){
-            return res.status(404).json({
-            success: false,
-            message:"User not found"
-            });
+
+        if (!user) {
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
+
         return res.status(200).json({
             success: true,
-            message: "User retrieved successfully",
+            message: MESSAGES.USER_RETRIEVED_SUCCESSFULLY,
             data: user
-        }); 
-    }
-    catch(error){
-       console.error(error);
-       return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-
         });
 
-    }
+    } catch (error) {
+
+    console.error(error);
+
+    next(error);
 
 }
+};
 
 
-const updateUser = async (req, res) => {
+// const updateUser = async (req, res, next) => {
+//     try {
+
+//         const id = req.params.id;
+
+//         const isOwner = req.user.id === id;
+//         const isAdmin = req.user.role === "admin";
+
+//         if (!isOwner && !isAdmin) {
+//             throw new AppError(MESSAGES.NOT_ALLOWED_UPDATE_USER, 403);
+//         }
+
+//         const user = await User.findById(id);
+
+//         if (!user) {
+//             throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+//         }
+
+//         let allowedUpdates = ["username", "phone", "addresses"];
+
+//         if (isAdmin) {
+//             allowedUpdates.push("role", "isVerified");
+//         }
+
+//         const updates = Object.keys(req.body);
+
+//         if (updates.length === 0 && !req.file) {
+//             throw new AppError(MESSAGES.NO_DATA_TO_UPDATE, 400);
+//         }
+
+//         const isValidOperation = updates.every((field) =>
+//             allowedUpdates.includes(field)
+//         );
+
+//         if (!isValidOperation) {
+//             throw new AppError(MESSAGES.INVALID_UPDATE_FIELDS, 400);
+//         }
+
+//         updates.forEach((field) => {
+//             user[field] = req.body[field];
+//         });
+
+//         if (req.file) {
+
+//             const uploaded = await uploadToCloudinary(
+//                 req.file.buffer,
+//                 "ecommerce/users"
+//             );
+
+//             if (user.avatar && user.avatar.publicId) {
+//                 await deleteFromCloudinary(user.avatar.publicId);
+//             }
+
+//             user.avatar = {
+//                 url: uploaded.secure_url,
+//                 publicId: uploaded.public_id
+//             };
+//         }
+
+//         await user.save();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: MESSAGES.USER_UPDATED_SUCCESSFULLY,
+//             data: user
+//         });
+
+//     } catch (error) {
+
+//     console.error(error);
+
+//     next(error);
+
+// }
+// };
+const updateUser = async (req, res, next) => {
+
+    let user;
+    let oldPublicId;
+    let newPublicId;
+
     try {
 
         const id = req.params.id;
@@ -140,22 +224,18 @@ const updateUser = async (req, res) => {
         const isAdmin = req.user.role === "admin";
 
         if (!isOwner && !isAdmin) {
-            return res.status(403).json({
-                success: false,
-                message: "You are not allowed to update this user."
-            });
+            throw new AppError(MESSAGES.NOT_ALLOWED_UPDATE_USER, 403);
         }
 
-        const user = await User.findById(id);
+        user = await User.findById(id);
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
 
-        let allowedUpdates = ["username","phone", "addresses"];
+        oldPublicId = user.avatar?.publicId;
+
+        let allowedUpdates = ["username", "phone", "addresses"];
 
         if (isAdmin) {
             allowedUpdates.push("role", "isVerified");
@@ -164,10 +244,7 @@ const updateUser = async (req, res) => {
         const updates = Object.keys(req.body);
 
         if (updates.length === 0 && !req.file) {
-            return res.status(400).json({
-                success: false,
-                message: "No data provided to update."
-            });
+            throw new AppError(MESSAGES.NO_DATA_TO_UPDATE, 400);
         }
 
         const isValidOperation = updates.every((field) =>
@@ -175,136 +252,167 @@ const updateUser = async (req, res) => {
         );
 
         if (!isValidOperation) {
-            return res.status(400).json({
-                success: false,
-                message: "Some fields are not allowed to be updated."
-            });
+            throw new AppError(MESSAGES.INVALID_UPDATE_FIELDS, 400);
         }
 
         updates.forEach((field) => {
             user[field] = req.body[field];
         });
 
-        // Upload new avatar if provided
         if (req.file) {
 
-            // Delete old avatar from Cloudinary
-            if (user.avatar && user.avatar.publicId) {
-                await deleteFromCloudinary(user.avatar.publicId);
-            }
-
-            // Upload new avatar
+            // ارفع الصورة الجديدة الأول
             const uploaded = await uploadToCloudinary(
                 req.file.buffer,
                 "ecommerce/users"
             );
 
+            newPublicId = uploaded.public_id;
+
+            // خزن بيانات الصورة الجديدة
             user.avatar = {
                 url: uploaded.secure_url,
                 publicId: uploaded.public_id
             };
         }
 
+        // احفظ البيانات أولاً
         await user.save();
+
+        // بعد نجاح الحفظ احذف الصورة القديمة
+        if (req.file && oldPublicId) {
+            try {
+                await deleteFromCloudinary(oldPublicId);
+            } catch (err) {
+                console.error("Failed to delete old avatar:", err);
+            }
+        }
 
         return res.status(200).json({
             success: true,
-            message: "User updated successfully",
+            message: MESSAGES.USER_UPDATED_SUCCESSFULLY,
             data: user
         });
 
     } catch (error) {
 
+        // لو رفعنا صورة جديدة لكن الحفظ فشل، امسح الصورة الجديدة
+        if (newPublicId) {
+            try {
+                await deleteFromCloudinary(newPublicId);
+            } catch (err) {
+                console.error("Failed to delete new avatar:", err);
+            }
+        }
+
         console.error(error);
 
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-
+        return next(error);
     }
 };
 
+const deleteUser = async (req, res, next) => {
+    try {
 
-
-
-
-
-
-
-
-const changePassword = async(req,res)=>{
-    try{
-        const{currentPassword, newPassword }= req.body;
-        const isMatch = await bcrypt.compare(currentPassword, req.user.password)
-
-        if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: "Current password is incorrect"
-            });
-        }
-        const samePassword = await bcrypt.compare(
-            newPassword,
-            req.user.password
-        );
-        if (samePassword) {
-            return res.status(400).json({
-                success: false,
-                message: "New password must be different from the current password."
-            });
-        }
-        req.user.password = newPassword;
-        await req.user.save();
-         return res.status(200).json({
-            success: true,
-            message: "Password changed successfully"
-        });    
-    }
-    catch(error){
-       console.error(error);
-       return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-
-    }
-};
-
-const deleteUser = async(req, res)=>{
-    try{
         const id = req.params.id;
-        const user = await User.findByIdAndDelete(id);
+
+        const user = await User.findById(id);
+
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
+
+        if (user.avatar && user.avatar.publicId) {
+            await deleteFromCloudinary(user.avatar.publicId);
+        }
+
+        await user.deleteOne();
+
         return res.status(200).json({
             success: true,
-            message: "User deleted successfully",
-        }); 
-    }
-    catch(error){
-       console.error(error);
-       return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-
+            message: MESSAGES.USER_DELETED_SUCCESSFULLY
         });
 
-    }
+    } catch (error) {
+
+    console.error(error);
+
+    next(error);
 
 }
+};
 
 
 
-module.exports={
+
+module.exports = {
     addUser,
     getUsers,
     getUserById,
     updateUser,
-    changePassword,
     deleteUser
-}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

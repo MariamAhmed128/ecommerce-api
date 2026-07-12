@@ -1,18 +1,22 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
 const User = require("../models/User.model");
 const OTP = require("../models/OTP.model");
 
 const generateOTP = require("../utils/generateOTP");
 const sendEmail = require("../utils/sendEmail");
 
-
 const {
     generateAccessToken,
     generateRefreshToken
 } = require("../utils/generateToken");
 
-const sendRegisterOtp = async (req, res) => {
+const AppError = require("../utils/appError");
+const MESSAGES = require("../utils/messages");
+
+const sendRegisterOtp = async (req, res, next) => {
 
     try {
 
@@ -21,10 +25,7 @@ const sendRegisterOtp = async (req, res) => {
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "Email already exists"
-            });
+            throw new AppError(MESSAGES.EMAIL_ALREADY_EXISTS, 400);
         }
 
         const otp = generateOTP();
@@ -62,57 +63,44 @@ const sendRegisterOtp = async (req, res) => {
 
             success: true,
 
-            message: "OTP sent successfully"
+            message: MESSAGES.OTP_SENT_SUCCESSFULLY
 
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.error(error);
 
-            success: false,
-
-            message: error.message
-
-        });
+        next(error);
 
     }
 
 };
 
 
+const verifyOtp = async (req, res, next) => {
 
-
-const verifyOtp = async (req, res) => {
     try {
+
         const { email, otp } = req.body;
 
         const otpRecord = await OTP.findOne({ email });
 
         if (!otpRecord) {
-            return res.status(400).json({
-                success: false,
-                message: "OTP not found"
-            });
+            throw new AppError(MESSAGES.OTP_NOT_FOUND, 400);
         }
 
         if (otpRecord.otp !== otp) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid OTP"
-            });
+            throw new AppError(MESSAGES.INVALID_OTP, 400);
         }
 
         if (otpRecord.expiresAt < new Date()) {
+
             await OTP.deleteOne({ email });
 
-            return res.status(400).json({
-                success: false,
-                message: "OTP has expired"
-            });
+            throw new AppError(MESSAGES.OTP_EXPIRED, 400);
         }
 
-        // 1) Create user
         const user = await User.create({
             ...otpRecord.userData,
             isVerified: true
@@ -120,11 +108,9 @@ const verifyOtp = async (req, res) => {
 
         await OTP.deleteOne({ email });
 
-        // 2) Generate tokens
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
-        // 3) Set refresh token in cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -132,27 +118,26 @@ const verifyOtp = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        // 4) Send response
         res.status(201).json({
             success: true,
-            message: "Account verified successfully",
+            message: MESSAGES.ACCOUNT_VERIFIED_SUCCESSFULLY,
             accessToken,
             user
         });
 
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+
+        console.error(error);
+
+        next(error);
+
     }
+
 };
 
 
 
-
-
-const login = async (req, res) => {
+const login = async (req, res, next) => {
 
     try {
 
@@ -161,26 +146,17 @@ const login = async (req, res) => {
         const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid email or password"
-            });
+            throw new AppError(MESSAGES.INVALID_EMAIL_OR_PASSWORD, 400);
         }
 
         if (!user.isVerified) {
-            return res.status(400).json({
-                success: false,
-                message: "Please verify your account first"
-            });
+            throw new AppError(MESSAGES.ACCOUNT_NOT_VERIFIED, 400);
         }
 
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid email or password"
-            });
+            throw new AppError(MESSAGES.INVALID_EMAIL_OR_PASSWORD, 400);
         }
 
         // Generate Tokens
@@ -198,34 +174,30 @@ const login = async (req, res) => {
         // Send Access Token
         res.status(200).json({
             success: true,
-            message: "Login successful",
+            message: MESSAGES.LOGIN_SUCCESSFUL,
             accessToken,
             user
         });
 
     } catch (error) {
 
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        console.error(error);
+
+        next(error);
 
     }
 
 };
 
 
+const refreshToken = async (req, res, next) => {
 
-const refreshToken = async (req, res) => {
     try {
 
         const token = req.cookies.refreshToken;
 
         if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: "Refresh token is required"
-            });
+            throw new AppError(MESSAGES.REFRESH_TOKEN_REQUIRED, 401);
         }
 
         const decoded = jwt.verify(
@@ -236,10 +208,7 @@ const refreshToken = async (req, res) => {
         const user = await User.findById(decoded.id);
 
         if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "User not found"
-            });
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 401);
         }
 
         const accessToken = generateAccessToken(user);
@@ -251,16 +220,22 @@ const refreshToken = async (req, res) => {
 
     } catch (error) {
 
-        return res.status(401).json({
-            success: false,
-            message: "Invalid or expired refresh token"
-        });
+        // jwt.verify بيرمي Error عادي مش AppError
+        if (!(error instanceof AppError)) {
+            error = new AppError(MESSAGES.INVALID_REFRESH_TOKEN, 401);
+        }
+
+        console.error(error);
+
+        next(error);
 
     }
+
 };
 
 
-const changeRole = async (req, res) => {
+const changeRole = async (req, res, next) => {
+
     try {
 
         const { id } = req.params;
@@ -269,10 +244,7 @@ const changeRole = async (req, res) => {
         const user = await User.findById(id);
 
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
 
         user.role = role;
@@ -281,40 +253,48 @@ const changeRole = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "User role updated successfully",
+            message: MESSAGES.USER_ROLE_UPDATED_SUCCESSFULLY,
             data: user
         });
 
     } catch (error) {
 
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        console.error(error);
+
+        next(error);
 
     }
-};
-
-
-const logout = async (req, res) => {
-
-    res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict"
-    });
-
-    res.status(200).json({
-
-        success: true,
-
-        message: "Logged out successfully"
-
-    });
 
 };
+const logout = async (req, res, next) => {
 
-const forgotPassword = async (req, res) => {
+    try {
+
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict"
+        });
+
+        res.status(200).json({
+
+            success: true,
+
+            message: MESSAGES.LOGGED_OUT_SUCCESSFULLY
+
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        next(error);
+
+    }
+
+};
+
+const forgotPassword = async (req, res, next) => {
 
     try {
 
@@ -323,14 +303,7 @@ const forgotPassword = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-
-            return res.status(404).json({
-
-                success: false,
-                message: "User not found"
-
-            });
-
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
 
         // Generate Original Reset Token
@@ -372,18 +345,15 @@ const forgotPassword = async (req, res) => {
         res.status(200).json({
 
             success: true,
-            message: "Password reset link sent successfully"
+            message: MESSAGES.PASSWORD_RESET_LINK_SENT
 
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.error(error);
 
-            success: false,
-            message: error.message
-
-        });
+        next(error);
 
     }
 
@@ -391,9 +361,7 @@ const forgotPassword = async (req, res) => {
 
 
 
-
-
-const resetPassword = async (req, res) => {
+const resetPassword = async (req, res, next) => {
 
     try {
 
@@ -413,14 +381,7 @@ const resetPassword = async (req, res) => {
         }).select("+password");
 
         if (!user) {
-
-            return res.status(400).json({
-
-                success: false,
-                message: "Invalid or expired reset token"
-
-            });
-
+            throw new AppError(MESSAGES.INVALID_RESET_TOKEN, 400);
         }
 
         user.password = password;
@@ -433,60 +394,96 @@ const resetPassword = async (req, res) => {
         res.status(200).json({
 
             success: true,
-            message: "Password reset successfully"
+            message: MESSAGES.PASSWORD_RESET_SUCCESSFULLY
 
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.error(error);
 
-            success: false,
-            message: error.message
-
-        });
+        next(error);
 
     }
 
 };
 
 
+const changePassword = async (req, res, next) => {
+    try {
+
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user.id).select("+password");
+
+        if (!user) {
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+        }
+
+        const isMatch = await bcrypt.compare(
+            currentPassword,
+            user.password
+        );
+
+        if (!isMatch) {
+            throw new AppError(MESSAGES.CURRENT_PASSWORD_INCORRECT, 400);
+        }
+
+        const samePassword = await bcrypt.compare(
+            newPassword,
+            user.password
+        );
+
+        if (samePassword) {
+            throw new AppError(MESSAGES.SAME_PASSWORD, 400);
+        }
+
+        user.password = newPassword;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: MESSAGES.PASSWORD_CHANGED_SUCCESSFULLY
+        });
+
+    } catch (error) {
+
+    console.error(error);
+
+    next(error);
+
+}
+};
 
 
 
-
-const getMe = async (req, res) => {
+const getMe = async (req, res, next) => {
 
     try {
 
         const user = await User.findById(req.user.id);
 
+        if (!user) {
+            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+        }
+
         res.status(200).json({
 
             success: true,
 
-            user
+            data: user
 
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        console.error(error);
 
-            success: false,
-
-            message: error.message
-
-        });
+        next(error);
 
     }
 
 };
-
-
-
-
-
 
 
 module.exports = {
@@ -506,6 +503,8 @@ module.exports = {
     forgotPassword,
 
     resetPassword,
+
+    changePassword,
 
     getMe
 
