@@ -190,7 +190,7 @@ const login = async (req, res, next) => {
 };
 
 
-const refreshToken = async (req, res, next) => {
+  const refreshToken = async (req, res, next) => {
 
     try {
 
@@ -211,7 +211,17 @@ const refreshToken = async (req, res, next) => {
             throw new AppError(MESSAGES.USER_NOT_FOUND, 401);
         }
 
+        // Generate New Tokens
         const accessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
+
+        // Replace Old Refresh Token
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         return res.status(200).json({
             success: true,
@@ -220,9 +230,11 @@ const refreshToken = async (req, res, next) => {
 
     } catch (error) {
 
-        // jwt.verify بيرمي Error عادي مش AppError
         if (!(error instanceof AppError)) {
-            error = new AppError(MESSAGES.INVALID_REFRESH_TOKEN, 401);
+            error = new AppError(
+                MESSAGES.INVALID_REFRESH_TOKEN,
+                401
+            );
         }
 
         console.error(error);
@@ -231,7 +243,8 @@ const refreshToken = async (req, res, next) => {
 
     }
 
-};
+};     
+
 
 
 const changeRole = async (req, res, next) => {

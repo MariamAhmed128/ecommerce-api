@@ -161,20 +161,11 @@ productSchema.methods.calculateAverageRating = function () {
 
             return sum + review.rating;
 
-        }, 0);
-//         this.reviews → الـ Array
-// sum → المجموع اللي بيتحدث كل مرة
-// review → العنصر الحالي في الـ Array
-// 0 → ابدأ العد من صفر
-
-        // this.averageRating = (total / this.numReviews()).toFixed(1);
+        }, 0);  
         this.averageRating = Number((total / this.numReviews).toFixed(1));
     }
 
 };
-
-
-
 
 
 // pre("save") Hook

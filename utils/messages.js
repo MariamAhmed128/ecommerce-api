@@ -1,34 +1,34 @@
+
+
 module.exports = {
 
-    // General
+    // === General 
     INTERNAL_SERVER_ERROR: "Internal server error",
     NO_DATA_TO_UPDATE: "No data provided to update.",
 
-    // Product 
+    // === Products 
     PRODUCT_NOT_FOUND: "Product not found",
     PRODUCTS_RETRIEVED_SUCCESSFULLY: "Products retrieved successfully",
     PRODUCT_RETRIEVED_SUCCESSFULLY: "Product retrieved successfully",
     PRODUCT_ADDED_SUCCESSFULLY: "Product added successfully",
+    INVALID_IMAGES_ARRAY: "imagesToDelete must be an array.",
     PRODUCT_UPDATED_SUCCESSFULLY: "Product updated successfully",
     PRODUCT_DELETED_SUCCESSFULLY: "Product deleted successfully",
 
     SKU_ALREADY_EXISTS: "SKU already exists",
-    IMAGES_REQUIRED: "At least one product image is required.",
-    DISCOUNT_PRICE_INVALID: "Discount price must be less than the original price.",
+    PRODUCT_IMAGE_REQUIRED: "At least one product image is required.",
+    INVALID_DISCOUNT_PRICE: "Discount price must be less than the original price.",
 
-
-
-    //  Reviews 
+    // === Reviews 
     REVIEW_NOT_FOUND: "Review not found",
-    REVIEW_ALREADY_EXISTS: "You have already reviewed this product.",
-    REVIEW_DELETE_FORBIDDEN: "You are not allowed to delete this review.",
+    ALREADY_REVIEWED: "You have already reviewed this product.",
+    NOT_ALLOWED_DELETE_REVIEW: "You are not allowed to delete this review.",
 
     REVIEW_ADDED_SUCCESSFULLY: "Review added successfully",
     REVIEW_DELETED_SUCCESSFULLY: "Review deleted successfully",
     REVIEWS_RETRIEVED_SUCCESSFULLY: "Reviews retrieved successfully",
 
-
-    //  Users 
+    // === Users 
     USER_NOT_FOUND: "User not found",
     USERS_RETRIEVED_SUCCESSFULLY: "Users retrieved successfully",
     USER_RETRIEVED_SUCCESSFULLY: "User retrieved successfully",
@@ -37,15 +37,14 @@ module.exports = {
     USER_DELETED_SUCCESSFULLY: "User deleted successfully",
 
     EMAIL_ALREADY_EXISTS: "Email already exists",
-    UPDATE_USER_FORBIDDEN: "You are not allowed to update this user.",
+    NOT_ALLOWED_UPDATE_USER: "You are not allowed to update this user.",
     INVALID_UPDATE_FIELDS: "Some fields are not allowed to be updated.",
 
     PASSWORD_CHANGED_SUCCESSFULLY: "Password changed successfully",
     CURRENT_PASSWORD_INCORRECT: "Current password is incorrect",
     SAME_PASSWORD: "New password must be different from the current password.",
 
-
-    // Auth
+    // === Auth 
     OTP_SENT_SUCCESSFULLY: "OTP sent successfully",
     OTP_NOT_FOUND: "OTP not found",
     INVALID_OTP: "Invalid OTP",
@@ -69,4 +68,3 @@ module.exports = {
     INVALID_RESET_TOKEN: "Invalid or expired reset token",
     PASSWORD_RESET_SUCCESSFULLY: "Password reset successfully",
 };
-

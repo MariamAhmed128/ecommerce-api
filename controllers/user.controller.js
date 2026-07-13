@@ -1,15 +1,24 @@
-
 const User = require("../models/User.model");
+
+const getPagination = require("../utils/pagination");
+
 const {
-    uploadToCloudinary,
-    deleteFromCloudinary
-} = require("../utils/uploadToCloudinary");
-const bcrypt = require("bcryptjs");
+    buildUserFilter,
+    getAllowedUserUpdates,
+    validateAllowedFields
+} = require("../utils/userHelpers");
+
+const {
+    uploadUserAvatar,
+    deleteUserAvatar,
+    deleteUserAvatarSafely
+} = require("../utils/userImageManager");
 
 const AppError = require("../utils/appError");
 const MESSAGES = require("../utils/messages");
 
 
+// 1-
 const addUser = async (req, res, next) => {
     try {
 
@@ -47,34 +56,17 @@ const addUser = async (req, res, next) => {
 };
 
 
-
+// 2-
 const getUsers = async (req, res, next) => {
     try {
 
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
-        const skip = (page - 1) * limit;
+        const {
+            page,
+            limit,
+            skip
+        } = getPagination(req.query);
 
-        const filter = {};
-
-        if (req.query.role) {
-            filter.role = req.query.role;
-        }
-
-        if (req.query.isVerified !== undefined) {
-            filter.isVerified = req.query.isVerified === "true";
-        }
-
-        if (req.query.search) {
-
-            const searchRegex = new RegExp(req.query.search, "i");
-
-            filter.$or = [
-                { username: searchRegex },
-                { email: searchRegex }
-            ];
-
-        }
+        const filter = buildUserFilter(req.query);
 
         const [users, totalUsers] = await Promise.all([
             User.find(filter)
@@ -107,7 +99,7 @@ const getUsers = async (req, res, next) => {
 };
 
 
-
+// 3-
 const getUserById = async (req, res, next) => {
     try {
 
@@ -134,82 +126,7 @@ const getUserById = async (req, res, next) => {
 }
 };
 
-
-// const updateUser = async (req, res, next) => {
-//     try {
-
-//         const id = req.params.id;
-
-//         const isOwner = req.user.id === id;
-//         const isAdmin = req.user.role === "admin";
-
-//         if (!isOwner && !isAdmin) {
-//             throw new AppError(MESSAGES.NOT_ALLOWED_UPDATE_USER, 403);
-//         }
-
-//         const user = await User.findById(id);
-
-//         if (!user) {
-//             throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
-//         }
-
-//         let allowedUpdates = ["username", "phone", "addresses"];
-
-//         if (isAdmin) {
-//             allowedUpdates.push("role", "isVerified");
-//         }
-
-//         const updates = Object.keys(req.body);
-
-//         if (updates.length === 0 && !req.file) {
-//             throw new AppError(MESSAGES.NO_DATA_TO_UPDATE, 400);
-//         }
-
-//         const isValidOperation = updates.every((field) =>
-//             allowedUpdates.includes(field)
-//         );
-
-//         if (!isValidOperation) {
-//             throw new AppError(MESSAGES.INVALID_UPDATE_FIELDS, 400);
-//         }
-
-//         updates.forEach((field) => {
-//             user[field] = req.body[field];
-//         });
-
-//         if (req.file) {
-
-//             const uploaded = await uploadToCloudinary(
-//                 req.file.buffer,
-//                 "ecommerce/users"
-//             );
-
-//             if (user.avatar && user.avatar.publicId) {
-//                 await deleteFromCloudinary(user.avatar.publicId);
-//             }
-
-//             user.avatar = {
-//                 url: uploaded.secure_url,
-//                 publicId: uploaded.public_id
-//             };
-//         }
-
-//         await user.save();
-
-//         return res.status(200).json({
-//             success: true,
-//             message: MESSAGES.USER_UPDATED_SUCCESSFULLY,
-//             data: user
-//         });
-
-//     } catch (error) {
-
-//     console.error(error);
-
-//     next(error);
-
-// }
-// };
+// 4-
 const updateUser = async (req, res, next) => {
 
     let user;
@@ -224,68 +141,77 @@ const updateUser = async (req, res, next) => {
         const isAdmin = req.user.role === "admin";
 
         if (!isOwner && !isAdmin) {
-            throw new AppError(MESSAGES.NOT_ALLOWED_UPDATE_USER, 403);
+            throw new AppError(
+                MESSAGES.NOT_ALLOWED_UPDATE_USER,
+                403
+            );
         }
 
         user = await User.findById(id);
 
         if (!user) {
-            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+            throw new AppError(
+                MESSAGES.USER_NOT_FOUND,
+                404
+            );
         }
 
         oldPublicId = user.avatar?.publicId;
 
-        let allowedUpdates = ["username", "phone", "addresses"];
-
-        if (isAdmin) {
-            allowedUpdates.push("role", "isVerified");
-        }
+        const allowedUpdates = getAllowedUserUpdates(isAdmin);
 
         const updates = Object.keys(req.body);
 
         if (updates.length === 0 && !req.file) {
-            throw new AppError(MESSAGES.NO_DATA_TO_UPDATE, 400);
+            throw new AppError(
+                MESSAGES.NO_DATA_TO_UPDATE,
+                400
+            );
         }
 
-        const isValidOperation = updates.every((field) =>
-            allowedUpdates.includes(field)
+        const isValidOperation = validateAllowedFields(
+            updates,
+            allowedUpdates
         );
 
         if (!isValidOperation) {
-            throw new AppError(MESSAGES.INVALID_UPDATE_FIELDS, 400);
+            throw new AppError(
+                MESSAGES.INVALID_UPDATE_FIELDS,
+                400
+            );
         }
 
-        updates.forEach((field) => {
+        updates.forEach(field => {
             user[field] = req.body[field];
         });
 
         if (req.file) {
 
-            // ارفع الصورة الجديدة الأول
-            const uploaded = await uploadToCloudinary(
-                req.file.buffer,
-                "ecommerce/users"
-            );
+            const avatar = await uploadUserAvatar(req.file);
 
-            newPublicId = uploaded.public_id;
+            newPublicId = avatar.publicId;
 
-            // خزن بيانات الصورة الجديدة
-            user.avatar = {
-                url: uploaded.secure_url,
-                publicId: uploaded.public_id
-            };
+            user.avatar = avatar;
+
         }
 
-        // احفظ البيانات أولاً
         await user.save();
 
-        // بعد نجاح الحفظ احذف الصورة القديمة
         if (req.file && oldPublicId) {
+
             try {
-                await deleteFromCloudinary(oldPublicId);
-            } catch (err) {
-                console.error("Failed to delete old avatar:", err);
+
+                await deleteUserAvatar(oldPublicId);
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to delete old avatar:",
+                    error
+                );
+
             }
+
         }
 
         return res.status(200).json({
@@ -296,21 +222,18 @@ const updateUser = async (req, res, next) => {
 
     } catch (error) {
 
-        // لو رفعنا صورة جديدة لكن الحفظ فشل، امسح الصورة الجديدة
         if (newPublicId) {
-            try {
-                await deleteFromCloudinary(newPublicId);
-            } catch (err) {
-                console.error("Failed to delete new avatar:", err);
-            }
+            await deleteUserAvatarSafely(newPublicId);
         }
 
         console.error(error);
 
-        return next(error);
-    }
-};
+        next(error);
 
+    }
+
+};
+// 5-
 const deleteUser = async (req, res, next) => {
     try {
 
@@ -323,7 +246,7 @@ const deleteUser = async (req, res, next) => {
         }
 
         if (user.avatar && user.avatar.publicId) {
-            await deleteFromCloudinary(user.avatar.publicId);
+            await deleteUserAvatar(user.avatar.publicId);;
         }
 
         await user.deleteOne();

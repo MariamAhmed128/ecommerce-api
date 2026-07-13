@@ -95,7 +95,9 @@ const updateProductValidation = Joi.object({
         Joi.string().trim()
     ),
 
-    featured: Joi.boolean()
+    featured: Joi.boolean() ,
+    
+    imagesToDelete: Joi.string().optional()
 
 }).min(1);
 
@@ -122,3 +124,6 @@ module.exports = {
     reviewValidation
 
 };
+
+
+// ==========
