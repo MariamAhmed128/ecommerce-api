@@ -7,8 +7,10 @@ dotenv.config();
 const connectDB = require("./DB/mongoose");
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
-const  productRoutes = require("./routes/product.routes")
+const productRoutes = require("./routes/product.routes")
+const cartRoutes = require("./routes/cart.routes")
 const errorHandler = require("./middleware/error.middleware");
+const wishlistRoutes = require("./routes/wishlist.routes");
 
 
 connectDB();
@@ -23,6 +25,9 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/carts", cartRoutes);
+app.use("/api/wishlists", wishlistRoutes);
+
 
 app.get("/", (req, res) => {
 
@@ -33,21 +38,17 @@ app.get("/", (req, res) => {
 
 });
 
-app.use((req, res) => {
+app.use((req, res, next) => {
 
-    res.status(404).json({
+    const error = new Error("Route not found");
+    error.statusCode = 404;
 
-        success: false,
-
-        message: "Route not found"
-
-    });
+    next(error);
 
 });
 
-
-
 app.use(errorHandler);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

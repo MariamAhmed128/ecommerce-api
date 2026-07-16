@@ -67,4 +67,42 @@ module.exports = {
     PASSWORD_RESET_LINK_SENT: "Password reset link sent successfully",
     INVALID_RESET_TOKEN: "Invalid or expired reset token",
     PASSWORD_RESET_SUCCESSFULLY: "Password reset successfully",
+    
+
+    // === Cart 
+    CART_RETRIEVED_SUCCESSFULLY: "Cart retrieved successfully",
+
+    ITEM_ADDED_TO_CART_SUCCESSFULLY: "Item added to cart successfully",
+
+    ITEM_QUANTITY_UPDATED_SUCCESSFULLY: "Item quantity updated successfully",
+
+    ITEM_REMOVED_FROM_CART_SUCCESSFULLY: "Item removed from cart successfully",
+
+    CART_NOT_FOUND: "Cart not found",
+
+    ITEM_NOT_FOUND_IN_CART: "Item not found in cart",
+
+    INVALID_COUPON: "Invalid coupon code",
+
+    CANNOT_APPLY_COUPON_TO_EMPTY_CART: "Cannot apply coupon to an empty cart",
+
+    COUPON_APPLIED_SUCCESSFULLY: "Coupon applied successfully",
+
+    COUPON_REMOVED_SUCCESSFULLY: "Coupon removed successfully",
+
+    CART_CLEARED_SUCCESSFULLY: "Cart cleared successfully",
+
+    // === Wishlist
+
+    WISHLIST_RETRIEVED_SUCCESSFULLY: "Wishlist retrieved successfully",
+
+    PRODUCT_ADDED_TO_WISHLIST_SUCCESSFULLY: "Product added to wishlist successfully",
+
+    PRODUCT_REMOVED_FROM_WISHLIST_SUCCESSFULLY: "Product removed from wishlist successfully",
+
+    PRODUCT_ALREADY_IN_WISHLIST: "Product already exists in wishlist",
+
+    PRODUCT_NOT_FOUND_IN_WISHLIST: "Product not found in wishlist",
+
+    WISHLIST_CLEARED_SUCCESSFULLY: "Wishlist cleared successfully",
 };
