@@ -92,6 +92,10 @@ module.exports = {
 
     CART_CLEARED_SUCCESSFULLY: "Cart cleared successfully",
 
+    PRODUCT_NOT_AVAILABLE: "This product is not available",
+
+    INSUFFICIENT_STOCK: "Insufficient stock",
+
     // === Wishlist
 
     WISHLIST_RETRIEVED_SUCCESSFULLY: "Wishlist retrieved successfully",
