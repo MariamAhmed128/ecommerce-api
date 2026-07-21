@@ -109,4 +109,26 @@ module.exports = {
     PRODUCT_NOT_FOUND_IN_WISHLIST: "Product not found in wishlist",
 
     WISHLIST_CLEARED_SUCCESSFULLY: "Wishlist cleared successfully",
+
+
+    // === Orders
+    ORDER_CREATED_SUCCESSFULLY: "Order created successfully",
+    ORDER_RETRIEVED_SUCCESSFULLY: "Order retrieved successfully",
+    ORDERS_RETRIEVED_SUCCESSFULLY: "Orders retrieved successfully",
+
+    ORDER_NOT_FOUND: "Order not found",
+
+    ORDER_CANCELLED_SUCCESSFULLY: "Order cancelled successfully",
+    ORDER_CANNOT_BE_CANCELLED: "This order cannot be cancelled",
+
+    ORDER_STATUS_UPDATED_SUCCESSFULLY: "Order status updated successfully",
+    ORDER_ALREADY_HAS_THIS_STATUS: "Order already has this status",
+
+    CART_NOT_FOUND_OR_NO_ITEMS_TO_ORDER:
+        "Cart not found or there are no items to order",
+
+    CARTS_RETRIEVED_SUCCESSFULLY: "Active carts retrieved successfully",
+
+    DASHBOARD_RETRIEVED_SUCCESSFULLY:
+        "Dashboard retrieved successfully",
 };

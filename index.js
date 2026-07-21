@@ -11,7 +11,7 @@ const productRoutes = require("./routes/product.routes")
 const cartRoutes = require("./routes/cart.routes")
 const errorHandler = require("./middleware/error.middleware");
 const wishlistRoutes = require("./routes/wishlist.routes");
-
+const orderRoutes = require("./routes/order.routes")
 
 connectDB();
 
@@ -27,7 +27,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/wishlists", wishlistRoutes);
-
+app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => {
 

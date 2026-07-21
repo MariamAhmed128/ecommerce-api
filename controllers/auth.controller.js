@@ -6,7 +6,7 @@ const User = require("../models/User.model");
 const OTP = require("../models/OTP.model");
 
 const generateOTP = require("../utils/generateOTP");
-const sendEmail = require("../utils/sendEmail");
+const sendEmail = require("../utils/emails/sendEmail");
 
 const {
     generateAccessToken,
@@ -29,9 +29,10 @@ const sendRegisterOtp = async (req, res, next) => {
         }
 
         const otp = generateOTP();
+        
 
         await OTP.findOneAndDelete({ email });
-
+        
         await OTP.create({
 
             email,
@@ -48,7 +49,7 @@ const sendRegisterOtp = async (req, res, next) => {
             }
 
         });
-
+        
         await sendEmail(
 
             email,
