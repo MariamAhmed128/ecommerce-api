@@ -2,6 +2,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 
+const cors = require("cors");
+
 dotenv.config();
 
 const connectDB = require("./DB/mongoose");
@@ -12,11 +14,24 @@ const cartRoutes = require("./routes/cart.routes")
 const errorHandler = require("./middleware/error.middleware");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const orderRoutes = require("./routes/order.routes")
+const webhookRoutes = require("./routes/webhook.routes");
+
 
 connectDB();
 
+
 const app = express();
 
+app.use(
+    cors({
+        origin: "http://localhost:5173",
+        credentials: true
+    })
+);
+
+
+
+app.use("/api/stripe", webhookRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

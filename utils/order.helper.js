@@ -103,8 +103,14 @@ const updateOrderFields = (
     }
 
     if (status === "delivered") {
+
         order.deliveredAt = new Date();
-        order.paymentStatus = "paid";
+
+        if (order.paymentMethod === "cash") {
+            order.paymentStatus = "paid";
+            order.paidAt = new Date();
+        }
+
     }
 
     if (status === "cancelled") {

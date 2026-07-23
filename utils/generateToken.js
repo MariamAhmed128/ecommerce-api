@@ -18,7 +18,8 @@ const generateAccessToken = (user) => {
         },
         process.env.JWT_SECRET,
         {
-            expiresIn: "1d"
+            // expiresIn: "1d"
+            expiresIn: "7d"   // مؤقتا
         }
     );
 };

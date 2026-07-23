@@ -1,7 +1,9 @@
+const mongoose = require("mongoose");
 
 // Models
 const Order = require("../models/Order.model");
 const Cart = require("../models/Cart.model");
+const Product = require("../models/Product.model");
 
 // Helpers
 const {
@@ -12,6 +14,10 @@ const {
     getDailyRevenue,
     getRecentOrders
 } = require("../utils/adminOrder.helper");
+
+
+const stripe = require("../config/stripe");
+
 
 const {
     buildOrderFilter,
@@ -25,6 +31,7 @@ const sendEmail = require("../utils/emails/sendEmail");
 const orderStatusEmail = require("../utils/emails/orderStatusEmail");
 
 // Utils
+const allowedTransitions = require("../utils/orderTransitions");
 const getPagination = require("../utils/pagination");
 const AppError = require("../utils/appError");
 const MESSAGES = require("../utils/messages");
@@ -252,20 +259,19 @@ const getAdminOrderById = async (req, res, next) => {
 
 const updateOrderStatus = async (req, res, next) => {
 
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
     try {
 
         const id = req.params.id;
 
-        const {
-            status,
-            adminNote
-        } = req.body;
+        const { status, adminNote } = req.body;
 
         const order = await Order.findById(id)
-            .populate(
-                "user",
-                "username email"
-            );
+            .populate("user", "username email")
+            .session(session);
 
         if (!order) {
             throw new AppError(
@@ -281,13 +287,66 @@ const updateOrderStatus = async (req, res, next) => {
             );
         }
 
+        if (
+            !allowedTransitions[order.status] ||
+            !allowedTransitions[order.status].includes(status)
+        ) {
+            throw new AppError(
+                MESSAGES.INVALID_ORDER_STATUS,
+                400
+            );
+        }
+
+        if (status === "cancelled") {
+
+            const shouldRestoreStock =
+                order.paymentMethod === "cash" ||
+                order.paymentStatus === "paid";
+
+            if (
+                order.paymentMethod === "stripe" &&
+                order.paymentStatus === "paid"
+            ) {
+
+                await stripe.refunds.create({
+                    payment_intent: order.transactionId
+                });
+
+                order.paymentStatus = "refunded";
+
+            }
+
+            if (shouldRestoreStock) {
+
+                for (const item of order.items) {
+
+                    await Product.findByIdAndUpdate(
+                        item.product,
+                        {
+                            $inc: {
+                                stock: item.quantity
+                            }
+                        },
+                        {
+                            session
+                        }
+                    );
+
+                }
+
+            }
+
+        }
+
         updateOrderFields(
             order,
             status,
             adminNote
         );
 
-        await order.save();
+        await order.save({ session });
+
+        await session.commitTransaction();
 
         try {
 
@@ -299,7 +358,10 @@ const updateOrderStatus = async (req, res, next) => {
 
         } catch (emailError) {
 
-            console.error("Failed to send order status email:", emailError);
+            console.error(
+                "Failed to send order status email:",
+                emailError
+            );
 
         }
 
@@ -311,9 +373,15 @@ const updateOrderStatus = async (req, res, next) => {
 
     } catch (error) {
 
+        await session.abortTransaction();
+
         console.error(error);
 
         return next(error);
+
+    } finally {
+
+        await session.endSession();
 
     }
 
@@ -327,8 +395,6 @@ module.exports = {
     getAdminOrderById,
     updateOrderStatus
 };
-
-
 
 
 
