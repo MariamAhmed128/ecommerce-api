@@ -1,7 +1,8 @@
-
 const buildUserFilter = (query) => {
 
-    const filter = {};
+    const filter = {
+        isActive: true
+    };
 
     if (query.role) {
         filter.role = query.role;
@@ -25,7 +26,6 @@ const buildUserFilter = (query) => {
     return filter;
 
 };
-
 
 
 const getAllowedUserUpdates = (isAdmin) => {

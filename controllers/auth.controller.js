@@ -29,7 +29,9 @@ const sendRegisterOtp = async (req, res, next) => {
         }
 
         const otp = generateOTP();
-        
+
+        const hashedOtp = await bcrypt.hash(otp, 10);
+
 
         await OTP.findOneAndDelete({ email });
         
@@ -37,7 +39,7 @@ const sendRegisterOtp = async (req, res, next) => {
 
             email,
 
-            otp,
+            otp: hashedOtp,
 
             expiresAt: new Date(Date.now() + 10 * 60 * 1000),
 
@@ -86,22 +88,29 @@ const verifyOtp = async (req, res, next) => {
         const { email, otp } = req.body;
 
         const otpRecord = await OTP.findOne({ email });
+    
 
         if (!otpRecord) {
             throw new AppError(MESSAGES.OTP_NOT_FOUND, 400);
         }
 
-        if (otpRecord.otp !== otp) {
-            throw new AppError(MESSAGES.INVALID_OTP, 400);
-        }
-
+        
         if (otpRecord.expiresAt < new Date()) {
 
             await OTP.deleteOne({ email });
 
             throw new AppError(MESSAGES.OTP_EXPIRED, 400);
+
         }
 
+        const isOtpValid = await bcrypt.compare(
+            otp,
+            otpRecord.otp
+        );
+
+        if (!isOtpValid) {
+            throw new AppError(MESSAGES.INVALID_OTP, 400);
+        }
         const user = await User.create({
             ...otpRecord.userData,
             isVerified: true
@@ -261,6 +270,13 @@ const changeRole = async (req, res, next) => {
             throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
         }
 
+        if (req.user._id.equals(user._id)) {
+            throw new AppError(
+                MESSAGES.CANNOT_CHANGE_OWN_ROLE,
+                400
+            );
+        }
+
         user.role = role;
 
         await user.save();
@@ -280,6 +296,8 @@ const changeRole = async (req, res, next) => {
     }
 
 };
+
+
 const logout = async (req, res, next) => {
 
     try {
@@ -314,53 +332,42 @@ const forgotPassword = async (req, res, next) => {
 
         const { email } = req.body;
 
-        const user = await User.findOne({ email });
 
-        if (!user) {
-            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+       const user = await User.findOne({ email });
+
+        if (user) {
+
+            // Generate Original Reset Token
+            const resetToken = crypto.randomBytes(32).toString("hex");
+
+            // Hash Token before saving in DB
+            const hashedToken = crypto
+                .createHash("sha256")
+                .update(resetToken)
+                .digest("hex");
+
+            user.resetPasswordToken = hashedToken;
+            user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+
+            await user.save();
+
+            const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+            await sendEmail(
+                email,
+                "Reset Your Password",
+                `
+                <h2>Password Reset Request</h2>
+                <p>Click the link below to reset your password:</p>
+                <a href="${resetURL}">${resetURL}</a>
+                <p>This link expires in 10 minutes.</p>
+                `
+            );
         }
 
-        // Generate Original Reset Token
-        const resetToken = crypto.randomBytes(32).toString("hex");
-
-        // Hash Token before saving in DB
-        const hashedToken = crypto
-            .createHash("sha256")
-            .update(resetToken)
-            .digest("hex");
-
-        // Save Hashed Token
-        user.resetPasswordToken = hashedToken;
-        user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
-
-        await user.save();
-
-        // Reset Link
-        const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
-        await sendEmail(
-
-            email,
-
-            "Reset Your Password",
-
-            `
-            <h2>Password Reset Request</h2>
-
-            <p>Click the link below to reset your password:</p>
-
-            <a href="${resetURL}">${resetURL}</a>
-
-            <p>This link expires in 10 minutes.</p>
-            `
-
-        );
-
-        res.status(200).json({
-
+        return res.status(200).json({
             success: true,
             message: MESSAGES.PASSWORD_RESET_LINK_SENT
-
         });
 
     } catch (error) {

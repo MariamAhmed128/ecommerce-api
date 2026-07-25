@@ -3,7 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const authController = require("../controllers/auth.controller");
-const userController = require("../controllers/user.controller");
+const {
+    authLimiter,
+    securityLimiter
+} = require("../middleware/rateLimit.middleware");
 const validate = require("../middleware/validation.middleware");
 const { auth, admin } = require("../middleware/auth.middleware");
 const validateObjectId = require("../middleware/validateObjectId.middleware");
@@ -21,12 +24,14 @@ const {
 // Register
 router.post(
     "/register/send-otp",
+    securityLimiter,
     validate(registerValidation),
     authController.sendRegisterOtp
 );
 
 router.post(
     "/register/verify-otp",
+    securityLimiter,
     validate(verifyOtpValidation),
     authController.verifyOtp
 );
@@ -35,6 +40,7 @@ router.post(
 // Login
 router.post(
     "/login",
+    authLimiter,
     validate(loginValidation),
     authController.login
 );
@@ -50,7 +56,7 @@ router.patch(
     "/change-role/:id",
     auth,
     admin,
-    validateObjectId,
+    validateObjectId(),
     validate(changeRoleValidation),
     authController.changeRole
 );
@@ -65,12 +71,14 @@ router.post(
 // Forgot Password
 router.post(
     "/forgot-password",
+    securityLimiter,
     validate(forgotPasswordValidation),
     authController.forgotPassword
 );
 
 router.post(
     "/reset-password",
+    securityLimiter,
     validate(resetPasswordValidation),
     authController.resetPassword
 );

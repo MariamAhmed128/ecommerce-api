@@ -82,12 +82,18 @@ const userSchema = new mongoose.Schema({
             ref: 'Product'
         }
     ],
-    isVerified:{
-        type:Boolean,
-        default:false
+    isVerified: {
+    type: Boolean,
+    default: false
     },
+
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+
     resetPasswordToken: String,
-	resetPasswordExpires: Date,
+    resetPasswordExpires: Date,
 },{timestamps: true});
 // -------------------------------------------------------------------------
 // Hash password before saving

@@ -20,6 +20,7 @@ router.post(
     "/add",
     auth,
     admin,
+    upload.single("avatar"),
     validate(addUserValidation),
     userController.addUser
 );
@@ -35,7 +36,7 @@ router.get(
     "/:id",
     auth,
     admin,
-    validateObjectId,
+    validateObjectId(),
     userController.getUserById
 );
 
@@ -43,7 +44,7 @@ router.delete(
     "/:id",
     auth,
     admin,
-    validateObjectId,
+    validateObjectId(),
     userController.deleteUser
 );
 
@@ -51,7 +52,7 @@ router.delete(
 router.patch(
     "/:id",
     auth,
-    validateObjectId,
+    validateObjectId(),
     upload.single("avatar"),
     validate(updateUserValidation),
     userController.updateUser

@@ -97,7 +97,10 @@ const updateProductValidation = Joi.object({
 
     featured: Joi.boolean() ,
     
-    imagesToDelete: Joi.string().optional()
+    imagesToDelete: Joi.alternatives().try(
+        Joi.array().items(Joi.string()),
+        Joi.string()
+    )
 
 }).min(1);
 

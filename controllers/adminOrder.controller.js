@@ -318,21 +318,21 @@ const updateOrderStatus = async (req, res, next) => {
 
             if (shouldRestoreStock) {
 
-                for (const item of order.items) {
-
-                    await Product.findByIdAndUpdate(
-                        item.product,
-                        {
-                            $inc: {
-                                stock: item.quantity
+                await Product.bulkWrite(
+                    order.items.map(item => ({
+                        updateOne: {
+                            filter: {
+                                _id: item.product
+                            },
+                            update: {
+                                $inc: {
+                                    stock: item.quantity
+                                }
                             }
-                        },
-                        {
-                            session
                         }
-                    );
-
-                }
+                    })),
+                    { session }
+                );
 
             }
 

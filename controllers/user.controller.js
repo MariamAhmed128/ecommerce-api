@@ -11,15 +11,19 @@ const {
 const {
     uploadUserAvatar,
     deleteUserAvatar,
-    deleteUserAvatarSafely
+    safeDeleteUserAvatar
 } = require("../utils/userImageManager");
 
 const AppError = require("../utils/appError");
 const MESSAGES = require("../utils/messages");
 
 
-// 1-
+// 1- Add User
+
 const addUser = async (req, res, next) => {
+
+    let newPublicId;
+
     try {
 
         const { username, email, password, phone, role } = req.body;
@@ -27,17 +31,32 @@ const addUser = async (req, res, next) => {
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
-            throw new AppError(MESSAGES.EMAIL_ALREADY_EXISTS, 409);
+            throw new AppError(
+                MESSAGES.EMAIL_ALREADY_EXISTS,
+                409
+            );
         }
 
-        const user = await User.create({
+        const userData = {
             username,
             email,
             password,
             phone,
             role: role || "customer",
             isVerified: true
-        });
+        };
+
+        if (req.file) {
+
+            const avatar = await uploadUserAvatar(req.file);
+
+            newPublicId = avatar.publicId;
+
+            userData.avatar = avatar;
+
+        }
+
+        const user = await User.create(userData);
 
         return res.status(201).json({
             success: true,
@@ -45,16 +64,19 @@ const addUser = async (req, res, next) => {
             data: user
         });
 
-    
     } catch (error) {
 
-    console.error(error);
+        if (newPublicId) {
+            await deleteUserAvatarSafely(newPublicId);
+        }
 
-    next(error);
+        console.error(error);
 
-}
+        next(error);
+
+    }
+
 };
-
 
 // 2-
 const getUsers = async (req, res, next) => {
@@ -105,7 +127,10 @@ const getUserById = async (req, res, next) => {
 
         const id = req.params.id;
 
-        const user = await User.findById(id);
+        const user = await User.findOne({
+            _id: id,
+            isActive: true
+        });
 
         if (!user) {
             throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
@@ -147,7 +172,10 @@ const updateUser = async (req, res, next) => {
             );
         }
 
-        user = await User.findById(id);
+        user = await User.findOne({
+            _id: id,
+            isActive: true
+        });
 
         if (!user) {
             throw new AppError(
@@ -233,23 +261,29 @@ const updateUser = async (req, res, next) => {
     }
 
 };
-// 5-
+// 5- Delete User (Soft Delete)
+
 const deleteUser = async (req, res, next) => {
+
     try {
 
-        const id = req.params.id;
+        const { id } = req.params;
 
-        const user = await User.findById(id);
+        const user = await User.findOne({
+            _id: id,
+            isActive: true
+        });
 
         if (!user) {
-            throw new AppError(MESSAGES.USER_NOT_FOUND, 404);
+            throw new AppError(
+                MESSAGES.USER_NOT_FOUND,
+                404
+            );
         }
 
-        if (user.avatar && user.avatar.publicId) {
-            await deleteUserAvatar(user.avatar.publicId);;
-        }
+        user.isActive = false;
 
-        await user.deleteOne();
+        await user.save();
 
         return res.status(200).json({
             success: true,
@@ -258,14 +292,13 @@ const deleteUser = async (req, res, next) => {
 
     } catch (error) {
 
-    console.error(error);
+        console.error(error);
 
-    next(error);
+        next(error);
 
-}
+    }
+
 };
-
-
 
 
 module.exports = {
@@ -275,9 +308,6 @@ module.exports = {
     updateUser,
     deleteUser
 };
-
-
-
 
 
 

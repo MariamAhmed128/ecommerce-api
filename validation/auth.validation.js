@@ -1,4 +1,18 @@
 const Joi = require("joi");
+
+// = Common Fields
+
+const password = Joi.string()
+    .min(8)
+    .pattern(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    );
+
+const phone = Joi.string()
+    .pattern(/^\+[1-9]\d{7,14}$/);
+
+// = Register
+
 const registerValidation = Joi.object({
 
     username: Joi.string()
@@ -10,14 +24,13 @@ const registerValidation = Joi.object({
         .email()
         .required(),
 
-    password: Joi.string()
-        .min(6)
-        .required(),
+    password: password.required(),
 
-    phone: Joi.string()
-        .required()
+    phone: phone.required()
 
 }).unknown(false);
+
+// = Verify OTP
 
 const verifyOtpValidation = Joi.object({
 
@@ -31,6 +44,8 @@ const verifyOtpValidation = Joi.object({
 
 });
 
+// = Login
+
 const loginValidation = Joi.object({
 
     email: Joi.string()
@@ -43,6 +58,8 @@ const loginValidation = Joi.object({
 });
 
 
+// = Forgot Password
+
 const forgotPasswordValidation = Joi.object({
 
     email: Joi.string()
@@ -51,32 +68,38 @@ const forgotPasswordValidation = Joi.object({
 
 });
 
+// = Reset Password
+
 const resetPasswordValidation = Joi.object({
 
     resetToken: Joi.string()
         .required(),
 
-    password: Joi.string()
-        .min(6)
-        .required()
+    password: password.required()
 
 });
 
-const changePasswordValidation = Joi.object({
-    currentPassword: Joi.string()
-        .required(),
+// = Change Password
 
-    newPassword: Joi.string()
-        .min(6)
-        .required()
+const changePasswordValidation = Joi.object({
+
+    currentPassword: Joi.string().required(),
+
+    newPassword: password.required()
+
 }).unknown(false);
 
+// = Change Role
+
 const changeRoleValidation = Joi.object({
+
     role: Joi.string()
         .valid("customer", "admin")
         .required()
+
 });
 
+// = Exports
 
 module.exports = {
     registerValidation,

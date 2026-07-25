@@ -63,8 +63,7 @@ const addItem = async (req, res, next) => {
             cart.items.push({
                 product: product._id,
                 name: product.name,
-                image: product.images[0].url,
-                // image: product.images[0]?.url
+                image: product.images?.[0]?.url,
                 price: product.price,
                 quantity
             });
@@ -175,7 +174,7 @@ const applyCoupon = async (req, res, next) => {
 
     try {
 
-        const { code } = req.body;
+        const code = req.body.code.trim().toUpperCase();
 
         const cart = await getOrCreateCart(req.user.id);
 

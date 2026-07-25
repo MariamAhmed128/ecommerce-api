@@ -3,6 +3,9 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 
 const cors = require("cors");
+const helmet = require("helmet");
+const hpp = require("hpp");
+// const mongoSanitize = require("express-mongo-sanitize");
 
 dotenv.config();
 
@@ -14,6 +17,7 @@ const cartRoutes = require("./routes/cart.routes")
 const errorHandler = require("./middleware/error.middleware");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const orderRoutes = require("./routes/order.routes")
+const adminOrderRoutes = require("./routes/adminOrder.routes")
 const webhookRoutes = require("./routes/webhook.routes");
 
 
@@ -29,13 +33,20 @@ app.use(
     })
 );
 
+app.use(helmet());
 
+app.use(hpp());
+
+// app.use(mongoSanitize());
 
 app.use("/api/stripe", webhookRoutes);
+
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -43,7 +54,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/wishlists", wishlistRoutes);
 app.use("/api/orders", orderRoutes);
-
+app.use("/api/orders", adminOrderRoutes);
 app.get("/", (req, res) => {
 
     res.json({

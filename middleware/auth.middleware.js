@@ -2,6 +2,13 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.model");
 
+
+
+const AppError = require("../utils/appError");
+const MESSAGES = require("../utils/messages");
+
+
+
 const auth = async (req, res, next) => {
 
     try {
@@ -10,47 +17,40 @@ const auth = async (req, res, next) => {
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
-            return res.status(401).json({
 
-                success: false,
-                message: "Authentication required"
+            throw new AppError(MESSAGES.AUTHENTICATION_REQUIRED, 401);
 
-            });
 
         }
 
-        const token = authHeader.replace("Bearer ", "").trim();
+        const token = authHeader.split(" ")[1];
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // const user = await User.findById(decoded.id);
-        const user = await User.findById(decoded.id).select("+password");
+        const user = await User.findById(decoded.id);
 
-        if (!user) {
 
-            return res.status(401).json({
-
-                success: false,
-                message: "User not found"
-
-            });
-
+        if (!user || !user.isActive) {
+            throw new AppError(MESSAGES.UNAUTHORIZED, 401);
         }
+    
 
         req.user = user;
         req.token = token;
 
         next();
 
-    } catch (error) {
+    }catch (error) {
+        if (
+            error.name === "JsonWebTokenError" ||
+            error.name === "TokenExpiredError"
+        ) {
+            return next(
+                new AppError(MESSAGES.INVALID_ACCESS_TOKEN, 401)
+            );
+        }
 
-        return res.status(401).json({
-
-            success: false,
-            message: "Invalid or expired access token"
-
-        });
-
+        next(error);
     }
 
 };
@@ -59,22 +59,19 @@ const admin = (req , res , next)=>{
 
 
     try{
-        if( req.user.role!== 'admin'){
-            return res.status(403).json({
-                success: false,
-                message: "Admin access required"
-            })
+
+        if(req.user.role !== "admin") {
+            throw new AppError(
+                MESSAGES.ADMIN_ACCESS_REQUIRED,
+                403
+            );
         }
+
         next();
    }
    
    catch(error){
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-
-        });
+        next(error);
    }
 };
 

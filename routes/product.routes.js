@@ -34,14 +34,14 @@ router.get(
 // Get single product
 router.get(
     "/:id",
-    validateObjectId,
+    validateObjectId(),
     productController.getProductById
 );
 
 // Get product reviews
 router.get(
     "/:id/reviews",
-    validateObjectId,
+    validateObjectId(),
     productController.getReviews
 );
 
@@ -62,7 +62,7 @@ router.put(
     "/update/:id",
     auth,
     admin,
-    validateObjectId,
+    validateObjectId(),
     upload.array("images", 5),
     validate(updateProductValidation),
     productController.updateProduct
@@ -73,7 +73,7 @@ router.delete(
     "/:id",
     auth,
     admin,
-    validateObjectId,
+    validateObjectId(),
     productController.deleteProduct
 );
 
@@ -83,7 +83,7 @@ router.delete(
 router.post(
     "/:id/reviews",
     auth,
-    validateObjectId,
+    validateObjectId(),
     validate(reviewValidation),
     productController.addReview
 );
@@ -92,7 +92,8 @@ router.post(
 router.delete(
     "/:id/reviews/:rid",
     auth,
-    validateObjectId,
+    validateObjectId("id"),
+    validateObjectId("rid"),
     productController.deleteReview
 );
 

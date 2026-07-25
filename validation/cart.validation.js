@@ -1,6 +1,5 @@
 const Joi = require("joi");
 
-const COUPONS = require("../utils/coupons");
 
 
 // ================= Common Fields =================
@@ -52,7 +51,6 @@ const applyCouponValidation = Joi.object({
     code: Joi.string()
         .trim()
         .uppercase()
-        // .valid(...Object.keys(COUPONS))
         .required()
 
 });

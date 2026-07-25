@@ -1,5 +1,9 @@
 
 
+const AppError = require("../utils/appError");
+const MESSAGES = require("../utils/messages");
+
+
 const validate = (schema, property = "body") => {
 
     return (req, res, next) => {
@@ -9,10 +13,16 @@ const validate = (schema, property = "body") => {
         });
 
         if (error) {
-            return res.status(400).json({
-                success: false,
-                errors: error.details.map(err => err.message)
-            });
+            return next(
+                new AppError(
+                    MESSAGES.VALIDATION_FAILED,
+                    400,
+                    error.details.map(err => ({
+                        field: err.path.join("."),
+                        message: err.message.replace(/"/g, "")
+                    }))
+                )
+            );
         }
 
         req[property] = value;

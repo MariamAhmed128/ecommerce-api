@@ -53,7 +53,7 @@ module.exports = {
     ACCOUNT_VERIFIED_SUCCESSFULLY: "Account verified successfully",
 
     INVALID_EMAIL_OR_PASSWORD: "Invalid email or password",
-    ACCOUNT_NOT_VERIFIED: "Please verify your account first",
+    ACCOUNT_NOT_VERIFIED:"Your account is not verified. Please verify it first.",
 
     LOGIN_SUCCESSFUL: "Login successful",
 
@@ -64,10 +64,13 @@ module.exports = {
 
     LOGGED_OUT_SUCCESSFULLY: "Logged out successfully",
 
-    PASSWORD_RESET_LINK_SENT: "Password reset link sent successfully",
+    PASSWORD_RESET_LINK_SENT:"If an account with this email exists, a password reset link has been sent.",
     INVALID_RESET_TOKEN: "Invalid or expired reset token",
     PASSWORD_RESET_SUCCESSFULLY: "Password reset successfully",
+
+    CANNOT_CHANGE_OWN_ROLE:"You cannot change your own role",
     
+    VALIDATION_FAILED: "Validation failed",
 
     // === Cart 
     CART_RETRIEVED_SUCCESSFULLY: "Cart retrieved successfully",
@@ -131,4 +134,39 @@ module.exports = {
 
     DASHBOARD_RETRIEVED_SUCCESSFULLY:
         "Dashboard retrieved successfully",
+
+    INVALID_ORDER_STATUS:
+        "Invalid order status transition",
+
+    // ===
+    AUTHENTICATION_REQUIRED: "Authentication required",
+
+    INVALID_ACCESS_TOKEN: "Invalid or expired access token",
+
+    UNAUTHORIZED: "Unauthorized access",
+
+    ADMIN_ACCESS_REQUIRED: "Admin access required",
+
+
+
+    // === General
+
+        INTERNAL_SERVER_ERROR: "Internal server error",
+        NO_DATA_TO_UPDATE: "No data provided to update.",
+
+        INVALID_ID_FORMAT: "Invalid ID format",
+        INVALID_TOKEN: "Invalid token",
+        TOKEN_EXPIRED: "Token expired",
+        DUPLICATE_VALUE: "Duplicate value already exists",
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ONLY_IMAGE_FILES_ARE_ALLOWED:
+    "Only image files are allowed",
+
+    INVALID_PAYMENT_METHOD:
+    "Invalid payment method",
 };
+
+
+

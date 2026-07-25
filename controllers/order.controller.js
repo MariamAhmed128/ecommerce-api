@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const stripe = require("../config/stripe");
 
 const Order = require("../models/Order.model");
-const Cart = require("../models/Cart.model");
 const Product = require("../models/Product.model");
 
 const User = require("../models/User.model");
@@ -17,8 +16,12 @@ const {
     validateProduct
 } = require("../utils/cart.helper");
 
+
 const {
-    calculateOrderTotals
+    buildOrderFromCart,
+    completeStripeOrder,
+    refundStripeOrder,
+    markStripePaymentFailed
 } = require("../utils/order.helper");
 
 
@@ -118,49 +121,26 @@ const createCashOrder = async (req, res, next) => {
 
     const session = await mongoose.startSession();
 
-    session.startTransaction();
 
     try {
 
-        const cart = await Cart.findOne({
-            user: req.user.id
-        }).session(session);
-
-        if (!cart || !cart.items.length) {
-            throw new AppError(
-                MESSAGES.CART_NOT_FOUND_OR_NO_ITEMS_TO_ORDER,
-                404
-            );
-        }
+        session.startTransaction();
 
         const { shippingAddress } = req.body;
 
         const {
+            cart,
+            productsToUpdate,
+            orderItems,
             subtotal,
             discount,
             shippingFee,
             tax,
             totalPrice
-        } = calculateOrderTotals(cart);
-
-        const productsToUpdate = [];
-
-        for (const item of cart.items) {
-
-            const product = await Product.findById(item.product)
-                .session(session);
-
-            validateProduct(product, item.quantity);
-
-            productsToUpdate.push({
-                product,
-                quantity: item.quantity
-            });
-
-        }
-
-        const orderItems = [...cart.items];
-
+        } = await buildOrderFromCart(
+            req.user.id,
+            session
+        );
         const order = await Order.create(
             [{
                 user: req.user.id,
@@ -177,13 +157,19 @@ const createCashOrder = async (req, res, next) => {
             { session }
         );
 
-        for (const productData of productsToUpdate) {
-
-            productData.product.stock -= productData.quantity;
-
-            await productData.product.save({ session });
-
-        }
+        await Product.bulkWrite(
+            productsToUpdate.map(item => ({
+                updateOne: {
+                    filter: { _id: item.product._id },
+                    update: {
+                        $inc: {
+                            stock: -item.quantity
+                        }
+                    }
+                }
+            })),
+            { session }
+        );
 
         cart.items = [];
         cart.coupon = undefined;
@@ -219,7 +205,9 @@ const createCashOrder = async (req, res, next) => {
 
     } catch (error) {
 
-        await session.abortTransaction();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
 
         console.error(error);
 
@@ -238,41 +226,24 @@ const createStripeOrder = async (req, res, next) => {
 
     const session = await mongoose.startSession();
 
-    session.startTransaction();
 
     try {
+        session.startTransaction();
 
-         const cart = await Cart.findOne({
-            user: req.user.id
-        }).session(session);
-
-        if (!cart || !cart.items.length) {
-            throw new AppError(
-                MESSAGES.CART_NOT_FOUND_OR_NO_ITEMS_TO_ORDER,
-                404
-            );
-        }
 
         const { shippingAddress } = req.body;
-        
+
         const {
+            orderItems,
             subtotal,
             discount,
             shippingFee,
             tax,
             totalPrice
-        } = calculateOrderTotals(cart);
-
-        for (const item of cart.items) {
-
-            const product = await Product.findById(item.product)
-                .session(session);
-
-            validateProduct(product, item.quantity);
-
-        }
-
-        const orderItems = [...cart.items];
+        } = await buildOrderFromCart(
+            req.user.id,
+            session
+        );
 
         const order = await Order.create(
             [{
@@ -316,7 +287,9 @@ const createStripeOrder = async (req, res, next) => {
     
     } catch (error) {
 
-        await session.abortTransaction();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
 
         console.error(error);
 
@@ -336,6 +309,9 @@ const stripeWebhook = async (req, res, next) => {
 
     try {
 
+
+        
+
         const signature = req.headers["stripe-signature"];
 
         const event = stripe.webhooks.constructEvent(
@@ -343,6 +319,7 @@ const stripeWebhook = async (req, res, next) => {
             signature,
             process.env.STRIPE_WEBHOOK_SECRET
         );
+
 
         if (event.type === "payment_intent.payment_failed") {
 
@@ -373,12 +350,10 @@ const stripeWebhook = async (req, res, next) => {
                     received: true
                 });
             }
-
-                order.paymentStatus = "failed";
-                order.status = "cancelled";
-                order.cancelledAt = new Date();
-
-                await order.save({ session });
+                await markStripePaymentFailed(
+                    order,
+                    session
+                );
 
                 await session.commitTransaction();
 
@@ -388,7 +363,10 @@ const stripeWebhook = async (req, res, next) => {
 
             } catch (error) {
 
-                await session.abortTransaction();
+                if (session.inTransaction()) {
+                    await session.abortTransaction();
+                }
+
                 throw error;
 
             } finally {
@@ -458,16 +436,15 @@ const stripeWebhook = async (req, res, next) => {
 
                 if (outOfStock) {
 
-                    await stripe.refunds.create({
-                        payment_intent: paymentIntent.id
-                    });
 
-                    order.status = "cancelled";
-                    order.paymentStatus = "refunded";
-                    order.cancelledAt = new Date();
-                    order.refundReason = "Out of stock";
+                    await refundStripeOrder(
+                        order,
+                        paymentIntent,
+                        stripe,
+                        session
+                    );
 
-                    await order.save();
+                    await session.commitTransaction();
 
                     return res.status(200).json({
                         received: true
@@ -475,41 +452,11 @@ const stripeWebhook = async (req, res, next) => {
 
                 }
 
-                for (const item of order.items) {
-
-                    await Product.findByIdAndUpdate(
-                        item.product,
-                        {
-                            $inc: {
-                                stock: -item.quantity
-                            }
-                        },
-                        {
-                            session
-                        }
-                    );
-
-                }
-                const cart = await Cart.findOne({
-                    user: order.user
-                }).session(session);
-
-                if (cart) {
-
-                    cart.items = [];
-                    cart.coupon = undefined;
-
-                    await cart.save({ session });
-
-                }
-
-                order.paymentStatus = "paid";
-                order.status = "confirmed";
-                order.paidAt = new Date();
-                order.transactionId = paymentIntent.id;
-
-                await order.save({ session });
-
+                await completeStripeOrder(
+                    order,
+                    paymentIntent,
+                    session
+                );
                 await session.commitTransaction();
 
                 const user = await User.findById(order.user);
@@ -539,9 +486,12 @@ const stripeWebhook = async (req, res, next) => {
                     received: true
                 });
 
-            } catch (error) {
+            }  catch (error) {
 
-                await session.abortTransaction();
+                if (session.inTransaction()) {
+                    await session.abortTransaction();
+                }
+
                 throw error;
 
             } finally {
@@ -589,9 +539,12 @@ const cancelOrder = async (req, res, next) => {
 
     const session = await mongoose.startSession();
 
-    session.startTransaction();
+
 
     try {
+
+             session.startTransaction();
+
             const id = req.params.id;
             const order = await Order.findOne({
                 _id: id,
@@ -625,7 +578,7 @@ const cancelOrder = async (req, res, next) => {
 
             }
 
-            if (shouldRestoreStock) {
+           if (shouldRestoreStock) {
 
                 const productsToRestore = [];
 
@@ -647,13 +600,19 @@ const cancelOrder = async (req, res, next) => {
 
                 }
 
-                for (const productData of productsToRestore) {
-
-                    productData.product.stock += productData.quantity;
-
-                    await productData.product.save({ session });
-
-                }
+                await Product.bulkWrite(
+                    productsToRestore.map(item => ({
+                        updateOne: {
+                            filter: { _id: item.product._id },
+                            update: {
+                                $inc: {
+                                    stock: item.quantity
+                                }
+                            }
+                        }
+                    })),
+                    { session }
+                );
 
             }
             order.status = "cancelled";
@@ -672,7 +631,9 @@ const cancelOrder = async (req, res, next) => {
 
     } catch (error) {
 
-        await session.abortTransaction();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
 
         console.error(error);
 
