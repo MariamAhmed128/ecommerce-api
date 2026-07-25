@@ -61,10 +61,8 @@ module.exports = (err, req, res, next) => {
 
     return res.status(500).json({
         success: false,
-        message: MESSAGES.INTERNAL_SERVER_ERROR,
-        ...(process.env.NODE_ENV === "development" && {
-            stack: err.stack
-        })
+        message: err.message,
+        stack: err.stack
     });
 
 };
