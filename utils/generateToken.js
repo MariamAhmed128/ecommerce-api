@@ -1,13 +1,5 @@
 
 
-
-
-
-
-
-
-
-
 const jwt = require("jsonwebtoken");
 
 const generateAccessToken = (user) => {
@@ -18,8 +10,7 @@ const generateAccessToken = (user) => {
         },
         process.env.JWT_SECRET,
         {
-            // expiresIn: "1d"
-            expiresIn: "7d"   // مؤقتا
+            expiresIn: process.env.JWT_EXPIRE
         }
     );
 };
@@ -31,7 +22,7 @@ const generateRefreshToken = (user) => {
         },
         process.env.REFRESH_SECRET,
         {
-            expiresIn: "7d"
+            expiresIn: process.env.REFRESH_EXPIRE
         }
     );
 };
@@ -40,3 +31,4 @@ module.exports = {
     generateAccessToken,
     generateRefreshToken
 };
+
