@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const connectDB = require("../DB/mongoose");
 
 const stripe = require("../config/stripe");
 
@@ -309,7 +310,7 @@ const stripeWebhook = async (req, res, next) => {
 
     try {
 
-
+        await connectDB();
         
 
         const signature = req.headers["stripe-signature"];

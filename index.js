@@ -19,9 +19,9 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 const orderRoutes = require("./routes/order.routes")
 const adminOrderRoutes = require("./routes/adminOrder.routes")
 const webhookRoutes = require("./routes/webhook.routes");
+const dbConnection = require("./middleware/dbConnection.middleware");
 
 
-connectDB();
 
 
 const app = express();
@@ -38,15 +38,13 @@ app.use(helmet());
 app.use(hpp());
 
 // app.use(mongoSanitize());
-
 app.use("/api/stripe", webhookRoutes);
 
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
-
 app.use(cookieParser());
 
+app.use(dbConnection);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
