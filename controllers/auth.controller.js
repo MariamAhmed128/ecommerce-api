@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User.model");
 const OTP = require("../models/OTP.model");
 
-const generateOTP = require("../utils/generateOTP");
+const generateOTP = require("../utils/generateOtp");
 const sendEmail = require("../utils/emails/sendEmail");
 
 const {
