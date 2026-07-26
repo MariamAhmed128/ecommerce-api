@@ -71,9 +71,7 @@ const addProduct = async (req, res, next) => {
         // Rollback Uploaded Images
         await deleteProductImages(uploadedImagePublicIds);
 
-        console.error(error);
-
-        // next(error);
+        // console.error(error);
 
         console.error("=== ADD PRODUCT ERROR ===");
         console.error(error);
@@ -81,6 +79,10 @@ const addProduct = async (req, res, next) => {
         console.error("Message:", error.message);
         console.error("Stack:", error.stack);
 
+
+        next(error);
+
+        
     }
 
 };
