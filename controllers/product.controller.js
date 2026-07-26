@@ -76,10 +76,10 @@ const addProduct = async (req, res, next) => {
         // next(error);
 
         console.error("=== ADD PRODUCT ERROR ===");
-console.error(error);
-console.error("Name:", error.name);
-console.error("Message:", error.message);
-console.error("Stack:", error.stack);
+        console.error(error);
+        console.error("Name:", error.name);
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
 
     }
 
