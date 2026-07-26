@@ -18,7 +18,7 @@ const AppError = require("../utils/appError");
 const MESSAGES = require("../utils/messages");
 
 // 1-
-const addProduct = async (req, res, next) => {g
+const addProduct = async (req, res, next) => {
 
     const uploadedImagePublicIds = [];
 
