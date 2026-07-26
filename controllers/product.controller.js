@@ -20,6 +20,7 @@ const MESSAGES = require("../utils/messages");
 // 1-
 const addProduct = async (req, res, next) => {
 
+
     const uploadedImagePublicIds = [];
 
     try {
@@ -72,7 +73,13 @@ const addProduct = async (req, res, next) => {
 
         console.error(error);
 
-        next(error);
+        // next(error);
+
+        console.error("=== ADD PRODUCT ERROR ===");
+console.error(error);
+console.error("Name:", error.name);
+console.error("Message:", error.message);
+console.error("Stack:", error.stack);
 
     }
 
