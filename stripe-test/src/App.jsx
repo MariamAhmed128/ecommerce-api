@@ -25,7 +25,7 @@ function App() {
       },
       {
         headers: {
-          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNWY1OGFmYTk2NGUyNzE5ZDhiZGU5OSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc4NDc5ODM5MywiZXhwIjoxNzg1NDAzMTkzfQ.cKL_Gm1y4kz_lKAHGzxBUBAHw-88e3tQmNutWhORaMc",
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNjUzYmQ3NDRjNzFhOWUzZTJiN2Q3ZiIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc4NTEyODE4OCwiZXhwIjoxNzg1MzAwOTg4fQ.QhLfZiPjvwuxwNoyph7v2c9QhTmak80XJ2sb5DGdXN8",
         },
       }
     );
