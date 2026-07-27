@@ -26,16 +26,23 @@ const dbConnection = require("./middleware/dbConnection.middleware");
 
 const app = express();
 
-app.use(
-    cors({
-        origin: [
-        "http://localhost:5173",
-        "https://ecommerce-api-hjqu-9ard77auw-mariam-a-elbahys-projects.vercel.app"
-        ],
-        credentials: true
-    })
-);
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://ecommerce-api-hjqu-1hnchxr1y-mariam-a-elbahys-projects.vercel.app"
+];
 
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true
+  })
+);
 app.use(helmet());
 
 app.use(hpp());
