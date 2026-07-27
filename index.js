@@ -30,6 +30,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://ecommerce-api-hjqu.vercel.app",
   "https://ecommerce-api-hjqu-1hnchxr1y-mariam-a-elbahys-projects.vercel.app",
+  "https://ecommerce-api-hjqu-bt3kyad12-mariam-a-elbahys-projects.vercel.app",
 ];
 
 app.use(
