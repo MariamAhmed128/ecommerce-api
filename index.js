@@ -29,20 +29,22 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://ecommerce-api-hjqu.vercel.app",
-  "https://ecommerce-api-hjqu-1hnchxr1y-mariam-a-elbahys-projects.vercel.app",
-  "https://ecommerce-api-hjqu-bt3kyad12-mariam-a-elbahys-projects.vercel.app",
 ];
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith("-mariam-a-elbahys-projects.vercel.app")
+      ) {
         return callback(null, true);
       }
 
-      callback(new Error("Not allowed by CORS"));
+      return callback(new Error(`Origin not allowed: ${origin}`));
     },
-    credentials: true
+    credentials: true,
   })
 );
 app.use(helmet());
