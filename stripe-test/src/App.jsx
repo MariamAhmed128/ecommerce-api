@@ -11,7 +11,7 @@ function App() {
 
   const createOrder = async () => {
     const res = await axios.post(
-      "http://localhost:3000/api/orders",
+        `${import.meta.env.VITE_API_URL}/orders`,
       {
         paymentMethod: "stripe",
         shippingAddress: {
