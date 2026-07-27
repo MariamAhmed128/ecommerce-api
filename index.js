@@ -28,7 +28,10 @@ const app = express();
 
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: [
+        "http://localhost:5173",
+        "https://ecommerce-api-hjqu-9ard77auw-mariam-a-elbahys-projects.vercel.app"
+        ],
         credentials: true
     })
 );

@@ -16,7 +16,8 @@ function Checkout() {
     await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: "http://localhost:5173",
+        return_url:
+          "https://ecommerce-api-hjqu-9ard77auw-mariam-a-elbahys-projects.vercel.app"
       },
     });
   };
