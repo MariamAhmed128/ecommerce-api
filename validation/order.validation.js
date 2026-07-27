@@ -47,8 +47,13 @@ const updateOrderStatusValidation = Joi.object({
 
     status: Joi.string()
         .valid(
-            "cash",
-            "stripe"
+            "pending",
+            "confirmed",
+            "processing",
+            "shipped",
+            "delivered",
+            "cancelled",
+            "returned"
         )
         .required(),
 
